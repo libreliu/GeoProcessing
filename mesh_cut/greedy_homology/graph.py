@@ -184,6 +184,7 @@ class Graph:
 
         return self.cycle_basis
 
+    # TODO: reduce from here!
     def get_boundary_basis(self):
         """Get boundary group basis (n_edges x n_faces)"""
         if self.boundary_basis is not None:
@@ -235,8 +236,8 @@ class Graph:
             
             # (rows, cols) = (rows, cols) - row_vec * coeff_in_working_col
             for r in range(working_row + 1, m):
-
                 A[r] -= A[working_row] * A[r, working_col]
+                A[r] %= 2
 
             pivot_column.append(working_col)
             working_row += 1
@@ -246,12 +247,17 @@ class Graph:
 
     def get_h1_basis(self):
         cbasis = self.get_cycle_basis()
-        bbasis = self.get_boundary_basis()
-        base_mat = np.ndarray((self.n_edges, bbasis.shape[1] + cbasis.shape[1]), dtype=self.coeff_field)
-        base_mat[:, 0:bbasis.shape[1]] = bbasis
-        base_mat[:, bbasis.shape[1]:] = cbasis
+        bbasis, bpivot = self.get_boundary_basis()
+        bcmatrix = np.ndarray((self.n_edges, bbasis.shape[1] + cbasis.shape[1]), dtype=self.coeff_field)
+        bcmatrix[:, 0:bbasis.shape[1]] = bbasis
+        bcmatrix[:, bbasis.shape[1]:] = cbasis
 
-        self.get_Bopt_column(bbasis)
+        bcpivot = self.get_Bopt_column(bcmatrix)
+        assert(bcpivot[:len(bpivot)] == bpivot)
+
+        hpivot = bcpivot[len(bpivot):]
+        hbasis = bcmatrix[:, hpivot]
+        return hbasis, hpivot
 
     @staticmethod
     def from_objfile(filename: str):

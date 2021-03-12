@@ -64,3 +64,10 @@ class GraphTest(unittest.TestCase):
         
         print(cbasis)
         print(graphInst.get_Bopt_column(cbasis))
+
+    def test_h1_basis(self):
+        graphInst = graph.Graph.from_openmesh(self.meshes['genus0'])
+        hbasis, hpivot = graphInst.get_h1_basis()
+        
+        print(hbasis)
+        print(hpivot)
