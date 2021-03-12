@@ -158,6 +158,7 @@ class Graph:
             e_idx = self.edge_lookup[e]
             path_vec[e_idx] += 1
         
+        assert(self.check_z2(path_vec))
         return path_vec
 
     def get_cycle_basis(self):
@@ -198,7 +199,9 @@ class Graph:
             self.boundary_basis[:, idx][e0_idx] = 1
             self.boundary_basis[:, idx][e1_idx] = 1
             self.boundary_basis[:, idx][e2_idx] = 1
-        return self.boundary_basis
+
+        self.pivot_boundary_basis = self.get_Bopt_column(self.boundary_basis)
+        return (self.boundary_basis, self.pivot_boundary_basis)
 
     def check_z2(self, A: np.ndarray):
         """Check if given matrix is in Z_2"""

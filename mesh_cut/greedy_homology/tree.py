@@ -50,8 +50,19 @@ class SpanningTree:
     def get_path(self, start, end):
         """[start_idx, ..., end_idx]"""
         assert(start != end)
-        # combine (start -> root_id) & (end -> root_id)
+        # (start -> root_id)
         spath = self.get_path_to_root(start)
+        # (end -> root_id)
         epath = self.get_path_to_root(end)
 
-        return spath + epath[::-1][1:]
+        # filter out the redundant by expanding from root to each vertices
+        last_passage = -1
+
+        while len(spath) > 0 and len(epath) > 0 \
+            and spath[len(spath) - 1] == epath[len(epath) - 1]:
+            
+            last_passage = spath[len(spath) - 1]
+            del spath[len(spath) - 1]
+            del epath[len(epath) - 1]
+
+        return spath + [last_passage] + epath[::-1]

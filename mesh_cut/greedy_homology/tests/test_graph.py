@@ -52,8 +52,15 @@ class GraphTest(unittest.TestCase):
     
     def test_boundary_basis(self):
         graphInst = graph.Graph.from_openmesh(self.meshes['genus0'])
-        bbasis = graphInst.get_boundary_basis()
+        bbasis, bpivot = graphInst.get_boundary_basis()
         self.assertEqual(bbasis.shape, (18, 12))
 
         print(bbasis)
         print(graphInst.get_Bopt_column(bbasis))
+    
+    def test_cycle_basis(self):
+        graphInst = graph.Graph.from_openmesh(self.meshes['genus0'])
+        cbasis = graphInst.get_cycle_basis()
+        
+        print(cbasis)
+        print(graphInst.get_Bopt_column(cbasis))
