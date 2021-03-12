@@ -204,33 +204,42 @@ class Graph:
         """Check if given matrix is in Z_2"""
         return ((A == 1) + (A == 0)).all()
 
-    def get_Bopt_column(self, A: np.ndarray):
+    def get_Bopt_column(self, A_input: np.ndarray):
         """Get first rank(A) linear independent column vectors of A over Z_2"""
+        A = A_input.copy()
         assert(self.check_z2(A))
 
         m, n = A.shape
         pivot_column = []
 
-        previous_pivot = 0
-        cur_pivot = 0
-        for i in range(0, m):
-            # find first non-zero entry
-            for j in range(previous_pivot + 1, n):
-                if A[i, j] == 0:
-                    continue
+        # no need to care things upside working_row
+        working_row = 0
+        working_col = 0
 
-                cur_pivot = j
-                
-                # do row-reduction
-                for row in range(i + 1, m):
-                    if A[row, j] == 0:
-                        continue
-                    else:
-                        # update this row
-                        A[row, :] = (A[row, :] - A[i, :]) % 2
+        while working_row < m and working_col < n:
+            # find element with first non-zero coeff this col
+            for i in range(working_row, m):
+                if A[i, working_col] != 0:
+                    break
+            else:
+                # all elements in this column is zero
+                working_col += 1
+                continue
 
-            previous_pivot = cur_pivot
-            pivot_column.append(cur_pivot)
+            if i > 0:
+                # swap row working_row with row i (working row)
+                A[[working_row, i], :] = A[[i, working_row], :]
+            
+            # (rows, cols) = (rows, cols) - row_vec * coeff_in_working_col
+            for r in range(working_row + 1, m):
+
+                A[r] -= A[working_row] * A[r, working_col]
+
+            pivot_column.append(working_col)
+            working_row += 1
+            working_col += 1
+
+        return pivot_column
 
     def get_h1_basis(self):
         cbasis = self.get_cycle_basis()
@@ -239,7 +248,7 @@ class Graph:
         base_mat[:, 0:bbasis.shape[1]] = bbasis
         base_mat[:, bbasis.shape[1]:] = cbasis
 
-        
+        self.get_Bopt_column(bbasis)
 
     @staticmethod
     def from_objfile(filename: str):

@@ -36,6 +36,9 @@ class SpanningTree:
 
     def get_path_to_root(self, node_id):
         path = [node_id]
+        if node_id == self.root_id:
+            return path
+
         next_elem = self.parent_tree[node_id]
         while next_elem != self.root_id:
             path.append(next_elem)
@@ -46,8 +49,9 @@ class SpanningTree:
 
     def get_path(self, start, end):
         """[start_idx, ..., end_idx]"""
+        assert(start != end)
         # combine (start -> root_id) & (end -> root_id)
         spath = self.get_path_to_root(start)
         epath = self.get_path_to_root(end)
 
-        return spath + epath.reverse()[1:]
+        return spath + epath[::-1][1:]

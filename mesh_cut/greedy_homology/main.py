@@ -23,7 +23,7 @@ def main(options):
       sys.exit(1)
    
    mesh = om.read_trimesh(options[0])
-   graph = Graph.from_openmesh(mesh)
+   graphInst = Graph.from_openmesh(mesh)
 
-   graph.build_mst()
-   graph.get_cycle_basis()
+   graphInst.build_mst()
+   graphInst.get_cycle_basis()
