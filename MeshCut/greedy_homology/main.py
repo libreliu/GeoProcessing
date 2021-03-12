@@ -10,23 +10,20 @@ Greedy Homology Basis Genarator
    - calculate shortest loop with e
 """
 
-from graph import Graph
+from .graph import Graph
 import openmesh as om
 import sys
 import logging
 
-def main():
+def main(options):
    logging.basicConfig(level=logging.INFO)
 
-   if len(sys.argv) != 2:
-      print(f"Usage: {sys.argc[0]} obj_file")
+   if len(options) != 1:
+      print(f"Options: obj_file")
       sys.exit(1)
    
-   mesh = om.read_trimesh(sys.argv[1])
+   mesh = om.read_trimesh(options[0])
    graph = Graph.from_openmesh(mesh)
 
    graph.build_mst()
    graph.get_cycle_basis()
-
-if __name__ == '__main__':
-   main()

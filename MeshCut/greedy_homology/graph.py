@@ -1,7 +1,7 @@
 import openmesh as om
 import numpy as np
-from heapdict import heapdict
-from tree import SpanningTree
+from .heapdict import heapdict
+from .tree import SpanningTree
 import logging
 
 logger = logging.getLogger(__name__)
@@ -212,11 +212,14 @@ class Graph:
         pivot_column = []
 
         previous_pivot = 0
+        cur_pivot = 0
         for i in range(0, m):
             # find first non-zero entry
             for j in range(previous_pivot + 1, n):
                 if A[i, j] == 0:
                     continue
+
+                cur_pivot = j
                 
                 # do row-reduction
                 for row in range(i + 1, m):
@@ -224,8 +227,10 @@ class Graph:
                         continue
                     else:
                         # update this row
-                        # TODO!
+                        A[row, :] = (A[row, :] - A[i, :]) % 2
 
+            previous_pivot = cur_pivot
+            pivot_column.append(cur_pivot)
 
     def get_h1_basis(self):
         cbasis = self.get_cycle_basis()
