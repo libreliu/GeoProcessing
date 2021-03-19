@@ -153,7 +153,7 @@ class Graph:
         assert(len(path) >= 2)
 
         path_vec = np.zeros((self.n_edges), dtype=self.coeff_field)
-        for i in range(1, len(path) - 1):
+        for i in range(1, len(path)):
             e = tuple(sorted((path[i - 1], path[i])))
             e_idx = self.edge_lookup[e]
             path_vec[e_idx] += 1
@@ -179,8 +179,10 @@ class Graph:
             # TODO: write this
             path = self.min_tree.get_path(vs, vd)
             path_vector = self.get_path_vector(path)
+            residual_edge_vector = self.get_path_vector([vs, vd])
             
-            self.cycle_basis[..., idx] = path_vector
+            self.cycle_basis[..., idx] = path_vector + residual_edge_vector
+            assert(self.check_z2(self.cycle_basis[..., idx]))
 
         return self.cycle_basis
 
@@ -247,6 +249,9 @@ class Graph:
 
     def get_h1_basis(self):
         cbasis = self.get_cycle_basis()
+        # DEBUG
+        cpivot = self.get_Bopt_column(cbasis)
+
         bbasis, bpivot = self.get_boundary_basis()
         bcmatrix = np.ndarray((self.n_edges, bbasis.shape[1] + cbasis.shape[1]), dtype=self.coeff_field)
         bcmatrix[:, 0:bbasis.shape[1]] = bbasis
@@ -257,7 +262,11 @@ class Graph:
 
         hpivot = bcpivot[len(bpivot):]
         hbasis = bcmatrix[:, hpivot]
+
         return hbasis, hpivot
+
+    def get_annotations(self):
+        pass
 
     @staticmethod
     def from_objfile(filename: str):

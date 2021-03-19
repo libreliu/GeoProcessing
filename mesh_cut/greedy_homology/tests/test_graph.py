@@ -7,7 +7,8 @@ class GraphTest(unittest.TestCase):
         MESH_BASEPATH = "./meshes"
 
         self.meshes = {
-            'genus0': om.read_trimesh(f"{MESH_BASEPATH}/Genus0.obj")
+            'genus0': om.read_trimesh(f"{MESH_BASEPATH}/Genus0.obj"),
+            'genus1': om.read_trimesh(f"{MESH_BASEPATH}/Genus1.obj")
         }
 
     def test_Bopt(self):
@@ -69,5 +70,13 @@ class GraphTest(unittest.TestCase):
         graphInst = graph.Graph.from_openmesh(self.meshes['genus0'])
         hbasis, hpivot = graphInst.get_h1_basis()
         
+        # 算出来应该是 0！！！为啥不对？
+        print(hbasis)
+        print(hpivot)
+
+
+        graphInst = graph.Graph.from_openmesh(self.meshes['genus1'])
+        hbasis, hpivot = graphInst.get_h1_basis()
+
         print(hbasis)
         print(hpivot)
