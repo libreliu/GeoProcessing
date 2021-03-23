@@ -12,7 +12,7 @@ class SpanningTree:
         self.edge_set = set()
         self.root_id = root_id
         self.n_vertices = n_vertices
-    
+
     def add_node(self, node_id, parent, dist):
         assert(parent in self.tree)
         assert(not any(
