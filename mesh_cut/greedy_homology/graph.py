@@ -3,6 +3,7 @@ import numpy as np
 from .heapdict import heapdict
 from .tree import SpanningTree
 import logging
+from .linalg import get_Bopt_column, check_z2, solve_z2, solve_z2_sequential
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +50,12 @@ class Graph:
         self.residual_edges = None
         self.cycle_basis = None
         self.boundary_basis = None
-        self.residual_edges = None
         self.dim_cycle = None
+        self.h1_basis = None
+        self.hpivot = None
+        self.z_tilde = None
+        # (vs, vd) => annotation
+        self.annotation_dict = None
 
         self.edge_set = set()
         self.coeff_field = coeff_field
@@ -158,7 +163,7 @@ class Graph:
             e_idx = self.edge_lookup[e]
             path_vec[e_idx] += 1
         
-        assert(self.check_z2(path_vec))
+        assert(check_z2(path_vec))
         return path_vec
 
     def get_cycle_basis(self):
@@ -169,7 +174,7 @@ class Graph:
         if self.min_tree is None:
             self.build_mst()
 
-        self.residual_edges = self.edge_set - self.min_tree.edge_set
+        self.residual_edges = list(self.edge_set - self.min_tree.edge_set)
         self.dim_cycle = len(self.residual_edges)
         logger.info(f"Residual edges: {self.dim_cycle}")
 
@@ -182,7 +187,7 @@ class Graph:
             residual_edge_vector = self.get_path_vector([vs, vd])
             
             self.cycle_basis[..., idx] = path_vector + residual_edge_vector
-            assert(self.check_z2(self.cycle_basis[..., idx]))
+            assert(check_z2(self.cycle_basis[..., idx]))
 
         return self.cycle_basis
 
@@ -203,69 +208,85 @@ class Graph:
             self.boundary_basis[:, idx][e1_idx] = 1
             self.boundary_basis[:, idx][e2_idx] = 1
 
-        self.pivot_boundary_basis = self.get_Bopt_column(self.boundary_basis)
+        self.pivot_boundary_basis = get_Bopt_column(self.boundary_basis)
         return (self.boundary_basis, self.pivot_boundary_basis)
 
-    def check_z2(self, A: np.ndarray):
-        """Check if given matrix is in Z_2"""
-        return ((A == 1) + (A == 0)).all()
-
-    def get_Bopt_column(self, A_input: np.ndarray):
-        """Get first rank(A) linear independent column vectors of A over Z_2"""
-        A = A_input.copy()
-        assert(self.check_z2(A))
-
-        m, n = A.shape
-        pivot_column = []
-
-        # no need to care things upside working_row
-        working_row = 0
-        working_col = 0
-
-        while working_row < m and working_col < n:
-            # find element with first non-zero coeff this col
-            for i in range(working_row, m):
-                if A[i, working_col] != 0:
-                    break
-            else:
-                # all elements in this column is zero
-                working_col += 1
-                continue
-
-            if i > 0:
-                # swap row working_row with row i (working row)
-                A[[working_row, i], :] = A[[i, working_row], :]
-            
-            # (rows, cols) = (rows, cols) - row_vec * coeff_in_working_col
-            for r in range(working_row + 1, m):
-                A[r] -= A[working_row] * A[r, working_col]
-                A[r] %= 2
-
-            pivot_column.append(working_col)
-            working_row += 1
-            working_col += 1
-
-        return pivot_column
-
     def get_h1_basis(self):
+        if self.h1_basis != None and self.hpivot != None and self.z_tilde != None:
+            return self.h1_basis, self.hpivot, self.z_tilde
+
         cbasis = self.get_cycle_basis()
         # DEBUG
-        cpivot = self.get_Bopt_column(cbasis)
+        cpivot = get_Bopt_column(cbasis)
 
         bbasis, bpivot = self.get_boundary_basis()
         bcmatrix = np.ndarray((self.n_edges, bbasis.shape[1] + cbasis.shape[1]), dtype=self.coeff_field)
         bcmatrix[:, 0:bbasis.shape[1]] = bbasis
         bcmatrix[:, bbasis.shape[1]:] = cbasis
 
-        bcpivot = self.get_Bopt_column(bcmatrix)
-        assert(bcpivot[:len(bpivot)] == bpivot)
+        bc_pivot = get_Bopt_column(bcmatrix)
+        assert(bc_pivot[:len(bpivot)] == bpivot)
+        self.z_tilde = bcmatrix[:, bc_pivot]
 
-        hpivot = bcpivot[len(bpivot):]
-        hbasis = bcmatrix[:, hpivot]
+        self.hpivot = bc_pivot[len(bpivot):]
+        self.h1_basis = bcmatrix[:, self.hpivot]
 
-        return hbasis, hpivot
+        return self.h1_basis, self.hpivot, self.z_tilde
 
-    def get_annotations(self):
+    def get_cycle_annotations(self):
+        """Get annotations for cycles"""
+        if self.annotation_dict != None:
+            return self.annotation_dict
+
+        _, hpivot, z_tilde = self.get_h1_basis()
+        dim_h1 = len(hpivot)
+        if dim_h1 == 0:
+            raise Exception("Well, no need to do trick on genus 0")
+        dim_b1 = z_tilde.shape[1] - dim_h1
+        cbasis = self.get_cycle_basis()
+
+        coord_mat = solve_z2_sequential(z_tilde, cbasis)
+        self.annotation_dict = {}
+
+        # lookup residual edge according to cbasis
+        assert(self.residual_edges != None)
+        for idx, (vs, vd) in enumerate(self.residual_edges):
+            h1_coeff = coord_mat[dim_h1:, idx]
+            self.annotation_dict[(vs, vd)] = h1_coeff
+        
+        return self.annotation_dict
+
+    def build_spt(self, start: int):
+        """Build shortest path tree starting from start"""
+        work_heap = heapdict()
+        
+        prevs = [None for i in range(0, self.n_vertices)]
+        dists = [float('inf') for i in range(0, self.n_vertices)]
+        for i in range(0, self.n_vertices):
+            work_heap[i] = float('int')
+
+        dists[start] = 0
+
+        while len(work_heap) > 0:
+            vd, _ = work_heap.popitem()
+            for (vd_neigh, (_, neigh_dist)) in self._v_pool.get(vd).edges.items():
+                alt = dists[vd] + neigh_dist
+                if alt < dists[vd_neigh]:
+                    dists[vd_neigh] = alt
+                    prevs[vd_neigh] = vd
+                    
+                    work_heap[vd_neigh] = alt
+        
+        sptree = SpanningTree(start, self.n_vertices)
+        # TODO: fix this
+        sptree.parent_tree = prevs
+        sptree.edge_set = set(
+            [sorted((k, v)) for k, v in prevs.items()]
+        )
+        
+        return dists, prevs, sptree
+
+    def calculate_optimal_basis(self):
         pass
 
     @staticmethod
