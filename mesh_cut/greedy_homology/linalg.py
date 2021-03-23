@@ -1,5 +1,4 @@
 import numpy as np
-from pyfinite.genericmatrix import *
 
 def check_z2(A: np.ndarray):
     """Check if given matrix is in Z_2"""

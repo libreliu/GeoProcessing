@@ -68,6 +68,7 @@ class Graph:
 
         # provide (vs, vd) -> edge index; vs < vd
         self.edge_lookup = {}
+        self.rev_edge_lookup = {}
 
         for idx, coord in enumerate(self._points):
             self._v_pool.add(
@@ -96,14 +97,17 @@ class Graph:
 
             if e0 not in self.edge_lookup:
                 self.edge_lookup[e0] = edge_idx
+                self.rev_edge_lookup[edge_idx] = e0
                 edge_idx += 1
 
             if e1 not in self.edge_lookup:
                 self.edge_lookup[e1] = edge_idx
+                self.rev_edge_lookup[edge_idx] = e1
                 edge_idx += 1
 
             if e2 not in self.edge_lookup:
                 self.edge_lookup[e2] = edge_idx
+                self.rev_edge_lookup[edge_idx] = e2
                 edge_idx += 1
         
         self.n_edges = len(self.edge_set)
@@ -122,6 +126,17 @@ class Graph:
             for neigh_id in vert.edges.keys():
                 if neigh_id > vert_id:
                     yield (vert_id, neigh_id, vert.edges[neigh_id][1])
+
+    def edge_list_from_vector(self, edge_vector: np.ndarray):
+        assert(edge_vector.shape == (self.n_edges,))
+
+        out_list = []
+        for i in range(0, self.n_edges):
+            if edge_vector[i] == 1:
+                out_list.append(self.rev_edge_lookup[i])
+        
+        return out_list
+
 
     def build_mst(self, start: int = 0):
         """ Build MST using Prim """
