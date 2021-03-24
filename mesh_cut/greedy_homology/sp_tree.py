@@ -23,6 +23,9 @@ class SpanningTree:
         # Only available in SPT
         self.dists = None
 
+        # vertice annotation
+        self.vertice_annotation = None
+
     def get_residual_edges(self):
         if self.residual_edges is not None:
             return self.residual_edges
@@ -105,14 +108,23 @@ class SpanningTree:
         if len(self.edge_set) != self.graphBase.n_vertices - 1:
             raise Exception("Mesh not connected.")
 
-    def build_spt(self, start: int):
+    def build_spt(self, start: int, annotate=True):
         """Build shortest path tree start from @start, uses Dijkstra"""
+        if self.parent_tree is not None:
+            raise Exception("Tree already built.")
+
         work_heap = heapdict()
-        
         self.parent_tree = {}
+        self.root_id = start
+        
+        if annotate:
+            assert(self.graphBase.annotation_null_vector is not None)
+            self.vertice_annotation = {}
+            self.vertice_annotation[start] = self.graphBase.annotation_null_vector
+
         self.dists = [float('inf') for i in range(0, self.graphBase.n_vertices)]
         for i in range(0, self.graphBase.n_vertices):
-            work_heap[i] = float('int')
+            work_heap[i] = float('inf')
 
         self.dists[start] = 0
 
@@ -123,10 +135,12 @@ class SpanningTree:
                 if alt < self.dists[vd_neigh]:
                     self.dists[vd_neigh] = alt
                     self.parent_tree[vd_neigh] = (vd, neigh_dist)
+                    if annotate:
+                        self.vertice_annotation[vd_neigh] = \
+                            (self.vertice_annotation[vd] ^ self.graphBase.get_edge_annotation(vd, vd_neigh))
                     
                     work_heap[vd_neigh] = alt
         
-        # TODO: fix this
         self.edge_set = set(
-            [sorted((k, v)) for k, v in self.parent_tree.items()]
+            [tuple(sorted((k, v))) for k, (v, _) in self.parent_tree.items()]
         )

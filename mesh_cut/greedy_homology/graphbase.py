@@ -71,6 +71,17 @@ class GraphBase:
         assert(check_z2(path_vec))
         return path_vec
 
+    def get_path_length(self, path):
+        """path: [vs, .., vd]"""
+        dist = 0
+        for i in range(1, len(path)):
+            vs = self._v_pool.get(path[i - 1])
+            vd = self._v_pool.get(path[i])
+
+            dist += np.sqrt(np.sum((vs.coord - vd.coord) ** 2))
+
+        return dist
+
     # ---------------------------
 
     def set_annotation(self, annotation, null_vector):
@@ -100,6 +111,7 @@ class GraphBase:
 
         # provide (vs, vd) -> edge index; vs < vd
         self.edge_lookup = {}
+        # edge_index -> (vs, vd)
         self.rev_edge_lookup = {}
         self.edge_set = set()
 

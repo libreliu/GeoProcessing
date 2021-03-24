@@ -1,9 +1,10 @@
 from mesh_cut.greedy_homology.graphbase import *
 from mesh_cut.greedy_homology.annotator import Annotator
+from mesh_cut.greedy_homology.homology_opt import HomologyBasisOptimizer
 import unittest
 import openmesh as om
 
-class AnnotatorTest(unittest.TestCase):
+class HomologyOptimizerTest(unittest.TestCase):
     def setUp(self) -> None:
         MESH_BASEPATH = "./meshes"
 
@@ -14,10 +15,13 @@ class AnnotatorTest(unittest.TestCase):
 
         logging.basicConfig(level=logging.DEBUG)
 
-    def test_annotation(self):
+    def test_optim(self):
         graphBase = GraphBase.from_openmesh(self.meshes['genus1'])
         annotator = Annotator(graphBase)
 
         annotation, null_vector = annotator.compute_annotation()
+        graphBase.set_annotation(annotation, null_vector)
 
-        print(annotation)
+        optim = HomologyBasisOptimizer(graphBase)
+
+        optim.compute_optimal_basis()

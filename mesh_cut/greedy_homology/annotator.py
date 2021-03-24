@@ -88,7 +88,7 @@ class Annotator:
         annotation_dict = {}
 
         for idx, (vs, vd) in enumerate(residual_edges):
-            h1_coeff = coord_mat[dim_h1:, idx]
+            h1_coeff = coord_mat[dim_boundary:, idx]
             annotation_dict[(vs, vd)] = h1_coeff
         
         annotation_null_vector = np.zeros((dim_h1,), dtype=np.int8)
