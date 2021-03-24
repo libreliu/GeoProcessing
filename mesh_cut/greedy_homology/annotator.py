@@ -24,9 +24,9 @@ class Annotator:
             e2_idx = self.graphBase.edge_lookup[tuple(sorted((face[0], face[2])))]
 
             # boundary(f_idx) w.r.t self.coeff_field
-            self.boundary_basis[:, idx][e0_idx] = 1
-            self.boundary_basis[:, idx][e1_idx] = 1
-            self.boundary_basis[:, idx][e2_idx] = 1
+            boundary_basis[:, idx][e0_idx] = 1
+            boundary_basis[:, idx][e1_idx] = 1
+            boundary_basis[:, idx][e2_idx] = 1
 
         bpivot = get_Bopt_column(boundary_basis)
         return boundary_basis, bpivot
@@ -47,9 +47,9 @@ class Annotator:
 
         return cycle_basis
 
-    def get_h1_basis(self, bbasis, cbasis, bpivot):
+    def get_h1_basis(self, bbasis: np.ndarray, cbasis: np.ndarray, bpivot: list):
         bcmatrix = np.ndarray(
-                        (self.n_edges, bbasis.shape[1] + cbasis.shape[1]),
+                        (self.graphBase.n_edges, bbasis.shape[1] + cbasis.shape[1]),
                         dtype=np.int8
                     )
         bcmatrix[:, 0:bbasis.shape[1]] = bbasis

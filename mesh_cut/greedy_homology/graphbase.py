@@ -1,6 +1,7 @@
 from .linalg import check_z2
 import numpy as np
 import logging
+import openmesh as om
 
 logger = logging.getLogger(__name__)
 
@@ -155,4 +156,7 @@ class GraphBase:
 
         logger.info(f"V={self.n_vertices}, E={self.n_edges}, F={self.n_faces}, genus={self.genus}")
     
-    
+    @staticmethod
+    def from_openmesh(mesh: om.TriMesh, copy: bool = False):
+        graphInst = GraphBase(mesh.points(), mesh.fv_indices())
+        return graphInst
