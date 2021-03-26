@@ -32,7 +32,7 @@ class HomologyBasisOptimizer:
                     self.graphBase.get_edge_annotation(vs, vd)
 
                 cycles.append(
-                    (cycle_length, path, annotation)
+                    (cycle_length, path + [vs], annotation)
                 )
         
         num_cycles = len(cycles)

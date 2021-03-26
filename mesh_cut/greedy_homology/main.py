@@ -94,7 +94,10 @@ def main(options):
 
    base_data = om_to_vis_polydata(mesh)
    for i in range(0, len(cycles)):
-      edge_data = lines_to_vis_polydata(mesh.points(), cycles[i][1])
+      edge_data = lines_to_vis_polydata(
+            mesh.points(),
+            graphBase.edge_list_from_vector(graphBase.get_path_vector(cycles[i][1]))
+         )
       offscreen_combine_plot(f"genus1_{i}_optim.png",
          (
             edge_data,
