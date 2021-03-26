@@ -1,5 +1,7 @@
+from .linalg import get_Bopt_column
 from .sp_tree import SpanningTree
 from .graphbase import GraphBase
+import numpy as np
 import logging
 
 logger = logging.getLogger(__name__)
@@ -36,3 +38,20 @@ class HomologyBasisOptimizer:
         num_cycles = len(cycles)
 
         logger.info(f"Number of candidate cycles: {num_cycles}")
+        assert(num_cycles != 0)
+
+        cycles.sort(key= lambda x: x[0])
+
+        anno_matrix = np.ndarray(
+                        (cycles[0][2].shape[0], num_cycles),
+                        dtype=np.int8
+                    )
+        for idx, cycleTuple in enumerate(cycles):
+            anno_matrix[:, idx] = cycleTuple[2]
+        
+        pivots = get_Bopt_column(anno_matrix)
+        assert(len(pivots) == cycles[0][2].shape[0])
+
+        return [
+            cycles[idx] for idx in pivots
+        ]

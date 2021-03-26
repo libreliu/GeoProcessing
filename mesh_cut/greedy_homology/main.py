@@ -10,6 +10,9 @@ Greedy Homology Basis Genarator
    - calculate shortest loop with e
 """
 
+from mesh_cut.greedy_homology.homology_opt import HomologyBasisOptimizer
+from mesh_cut.greedy_homology.annotator import Annotator
+from mesh_cut.greedy_homology.graphbase import GraphBase
 from .graph import Graph
 import openmesh as om
 import numpy as np
@@ -76,25 +79,23 @@ def main(options):
    if len(options) != 1:
       print(f"Options: obj_file")
       sys.exit(1)
-   
+
    mesh = om.read_trimesh(options[0])
-   graphInst = Graph.from_openmesh(mesh)
 
-   graphInst.build_mst()
-   graphInst.get_cycle_basis()
+   graphBase = GraphBase.from_openmesh(mesh)
+   annotator = Annotator(graphBase)
 
-   hbasis, hpivot, bc_tilde = graphInst.get_h1_basis()
+   annotation, null_vector = annotator.compute_annotation()
+   graphBase.set_annotation(annotation, null_vector)
 
-   dim_h1 = hbasis.shape[1]
-   if dim_h1 == 0:
-      print(f"Expected nonzero H1 dimension, abort.")
-      sys.exit(1)
-   
+   optim = HomologyBasisOptimizer(graphBase)
+
+   cycles = optim.compute_optimal_basis()
+
    base_data = om_to_vis_polydata(mesh)
-   for i in range(0, dim_h1):
-      edge_list = graphInst.edge_list_from_vector(hbasis[:, i])
-      edge_data = lines_to_vis_polydata(mesh.points(), edge_list)
-      offscreen_combine_plot(f"genus1_{i}.png",
+   for i in range(0, len(cycles)):
+      edge_data = lines_to_vis_polydata(mesh.points(), cycles[i][1])
+      offscreen_combine_plot(f"genus1_{i}_optim.png",
          (
             edge_data,
             {
