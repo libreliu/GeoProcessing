@@ -13,13 +13,14 @@ Greedy Homology Basis Genarator
 from mesh_cut.greedy_homology.homology_opt import HomologyBasisOptimizer
 from mesh_cut.greedy_homology.annotator import Annotator
 from mesh_cut.greedy_homology.graphbase import GraphBase
-from .graph import Graph
 import openmesh as om
 import numpy as np
 import sys
 import logging
 
 import pyvista as pv
+
+logger = logging.getLogger(__name__)
 
 def om_to_vis_polydata(mesh: om.TriMesh):
    """ Plot (triangulated) OpenMesh via pyvista """
@@ -67,30 +68,35 @@ def combine_plot(*args):
 def offscreen_combine_plot(filename, *args):
     assert(len(args) >= 1)
     p = pv.Plotter(off_screen=True, window_size=[1920, 1080])
-    p.set_position(np.array([4.0, 6.4, 5.6]))
+    #p.set_position(np.array([4.0, 6.4, 5.6]))
     for idx, arg in enumerate(args):
         p.add_mesh(arg[0], **arg[1])
     
     p.screenshot(filename)
 
 def main(options):
-   logging.basicConfig(level=logging.INFO)
+   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)40s - %(levelname)s - %(message)s')
 
    if len(options) != 1:
       print(f"Options: obj_file")
       sys.exit(1)
 
+   logger.info(f"Reading {options[0]}")
    mesh = om.read_trimesh(options[0])
 
+   logger.info("Constructing GraphBase..")
    graphBase = GraphBase.from_openmesh(mesh)
    annotator = Annotator(graphBase)
 
+   logger.info("Calculating annotation..")
    annotation, null_vector = annotator.compute_annotation()
    graphBase.set_annotation(annotation, null_vector)
 
    optim = HomologyBasisOptimizer(graphBase)
 
+   logger.info("Computing optimal basis..")
    cycles = optim.compute_optimal_basis()
+   logger.info("Optimal basis computation finished.")
 
    base_data = om_to_vis_polydata(mesh)
    for i in range(0, len(cycles)):
@@ -98,7 +104,9 @@ def main(options):
             mesh.points(),
             graphBase.edge_list_from_vector(graphBase.get_path_vector(cycles[i][1]))
          )
-      offscreen_combine_plot(f"genus1_{i}_optim.png",
+      resname = options[0].split(".")[0]
+      offscreen_combine_plot(f"{resname}_{i}_optim.png",
+      #combine_plot(
          (
             edge_data,
             {

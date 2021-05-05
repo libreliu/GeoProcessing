@@ -41,8 +41,21 @@ def get_Bopt_column(A_input: np.ndarray):
 
     return pivot_column
 
-# TODO: pre-calculate factorization
 def solve_z2_sequential(A_input: np.ndarray, Z: np.ndarray):
+    m, n = A_input.shape
+    assert(m > n)
+    row_pivot = get_Bopt_column(A_input.T)
+    assert(len(row_pivot) == n)
+
+    X = np.linalg.inv(A_input[row_pivot, :]) @ Z[row_pivot, :]
+
+    result = (np.round(X) % 2).astype(np.int8)
+    #assert(np.allclose(result, solve_z2_sequential_slow(A_input, Z)))
+
+    return result
+
+# TODO: pre-calculate factorization
+def solve_z2_sequential_slow(A_input: np.ndarray, Z: np.ndarray):
     m, n = A_input.shape
     m_dup, p = Z.shape
     assert(m_dup == m)
@@ -58,7 +71,7 @@ def solve_z2(A_input: np.ndarray, z: np.ndarray):
     m, n = A_input.shape
     A_aug = np.hstack((A_input, z))
 
-    assert(n not in get_Bopt_column(A_aug))
+    #assert(n not in get_Bopt_column(A_aug))
 
     pivot_column = []
 
@@ -94,7 +107,7 @@ def solve_z2(A_input: np.ndarray, z: np.ndarray):
     # Backsubstitution from upper triangular
     assert(len(pivot_column) == n)
     solution = np.ndarray(shape=(n,1), dtype=np.int8)
-    assert((A_aug[0:n, 0:n] == np.identity(n, dtype=np.int8)).all())
+    #assert((A_aug[0:n, 0:n] == np.identity(n, dtype=np.int8)).all())
     for i in range(n-1, -1, -1):
         solution[i] = A_aug[i, n]
 

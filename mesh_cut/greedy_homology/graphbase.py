@@ -163,6 +163,9 @@ class GraphBase:
         
         # TODO: check if mesh is closed
         self.genus = 1 - (self.n_vertices - self.n_edges + self.n_faces) / 2
+        if abs(self.genus - 0.5) < 1e-3:
+            raise Exception("The mesh seems already planar!")
+
         assert(abs(round(self.genus) - self.genus) < 1e-3)
         self.genus = round(self.genus)
 
