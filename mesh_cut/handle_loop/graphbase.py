@@ -2,6 +2,7 @@ from .linalg import check_z2
 import numpy as np
 import logging
 import openmesh as om
+import meshpy, meshpy.tet, meshpy.geometry
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +183,7 @@ class GraphBase:
         return graphInst
 
     @staticmethod
-    def volumetric_from_openmesh(mesh: om.TriMesh, copy: bool = False):
+    def volumetric_from_openmesh(mesh: om.TriMesh, copy: bool = False, box_margin: float = 0.5):
         if copy:
             points = np.copy(mesh.points())
             fv_indices = np.copy(mesh.fv_indices())
@@ -191,27 +192,56 @@ class GraphBase:
             fv_indices = mesh.fv_indices()
 
         num_points = points.shape[0]
-        idx_compaction = num_points
-        compaction_point = np.asarray([114514, 114514, 114514], dtype=np.float64)
 
-        edge_set = set()
-        
-        for face in fv_indices:
-            e0 = tuple(sorted((face[0], face[1])))
-            e1 = tuple(sorted((face[1], face[2])))
-            e2 = tuple(sorted((face[0], face[2])))
+        # find bounding box
+        xmin = ymin = zmin = 100000.0
+        xmax = ymax = zmax = -100000.0
 
-            edge_set.add(e0)
-            edge_set.add(e1)
-            edge_set.add(e2)
-
-        new_trigs = np.ndarray((len(edge_set), 3), dtype=np.int32)
-        for idx, (vs, vd) in enumerate(edge_set):
-            new_trigs[idx] = np.asarray([vs, vd, idx_compaction])
-            print(new_trigs[idx])
+        for point in points:
+            # print(point)
+            if point[0] < xmin:
+                xmin = point[0]
+            if point[1] < ymin:
+                ymin = point[1]
+            if point[2] < zmin:
+                zmin = point[2]
             
-        fv_indices = np.vstack((fv_indices, new_trigs))
-        points = np.vstack([points, compaction_point])
+            if point[0] > xmax:
+                xmax = point[0]
+            if point[1] > ymax:
+                ymax = point[1]
+            if point[2] > zmax:
+                zmax = point[2]
+        
+        print(f"AABBMin=({xmin},{ymin},{zmin}) AABBMax=({xmax},{ymax},{zmax})")
+
+        boxPoints, boxFacets, _, boxFacetMarkers = meshpy.geometry.make_box(
+            np.array([xmin - box_margin, ymin - box_margin, zmin - box_margin]), np.array([xmax + box_margin, ymax + box_margin, zmax + box_margin])
+        )
+
+        boxFacets = meshpy.geometry.offset_point_indices(boxFacets, len(points))
+
+        meshInfo = meshpy.tet.MeshInfo()
+        meshInfo.set_points(
+            np.vstack((
+                points,
+                boxPoints
+            ))
+        )
+
+        meshInfo.set_facets(
+            [fv for fv in fv_indices.tolist()] + \
+            [fv for fv in boxFacets]
+        )
+
+        # TODO: find a point inside the surface
+        meshInfo.set_holes([(0.9, 0.9, 0.9)])
+
+        mesh = meshpy.tet.build(meshInfo)
+
+        mesh.write_vtk("tetgen_output.vtk")
+
+        assert(False)
 
         graphInst = GraphBase(points, fv_indices, True)
         return graphInst
