@@ -213,7 +213,7 @@ class GraphBase:
             if point[2] > zmax:
                 zmax = point[2]
         
-        print(f"AABBMin=({xmin},{ymin},{zmin}) AABBMax=({xmax},{ymax},{zmax})")
+        logger.info(f"AABBMin=({xmin},{ymin},{zmin}) AABBMax=({xmax},{ymax},{zmax})")
 
         boxPoints, boxFacets, _, boxFacetMarkers = meshpy.geometry.make_box(
             np.array([xmin - box_margin, ymin - box_margin, zmin - box_margin]), np.array([xmax + box_margin, ymax + box_margin, zmax + box_margin])
@@ -241,7 +241,16 @@ class GraphBase:
 
         mesh.write_vtk("tetgen_output.vtk")
 
-        assert(False)
+        # tetra -> 4 faces, no orientation considered
+        tet_points = np.asarray(mesh.points)
+        assert(np.allclose(tet_points[0:len(points)], points))
+        num_tets = len(mesh.elements)
+        tet_fv_indices = np.ndarray((num_tets * 4, 3), dtype=np.int)
+        for idx, tetra in enumerate(mesh.elements):
+            tet_fv_indices[idx * 4] = [tetra[0], tetra[1], tetra[2]]
+            tet_fv_indices[idx * 4 + 1] = [tetra[0], tetra[1], tetra[3]]
+            tet_fv_indices[idx * 4 + 2] = [tetra[0], tetra[2], tetra[3]]
+            tet_fv_indices[idx * 4 + 3] = [tetra[1], tetra[2], tetra[3]]
 
-        graphInst = GraphBase(points, fv_indices, True)
+        graphInst = GraphBase(tet_points, tet_fv_indices, True)
         return graphInst
