@@ -1,3 +1,4 @@
+from mesh_cut.handle_loop.linalg import get_Bopt_column
 from mesh_cut.handle_loop.homology_opt import HomologyBasisOptimizer, OptimizedHomologyBasisOptimizer
 from mesh_cut.handle_loop.sp_tree import SpanningTree
 from mesh_cut.handle_loop.graphbase import *
@@ -116,9 +117,12 @@ class AnnotatorTest(unittest.TestCase):
 
         print("Calculating annotation..")
         annotation, null_vector = annotator.compute_annotation()
-        graphBase.set_annotation(annotation, null_vector)
+        volumetricGraphBase.set_annotation(annotation, null_vector)
 
-        optim = HomologyBasisOptimizer(graphBase)
+        print("bbasis")
+        bbasis, bpivot = annotator.get_boundary_basis()
+
+        optim = HomologyBasisOptimizer(volumetricGraphBase)
 
         print("Computing optimal basis..")
         cycles = optim.compute_optimal_basis()
@@ -129,11 +133,11 @@ class AnnotatorTest(unittest.TestCase):
         for i in range(0, len(cycles)):
             edge_data = lines_to_vis_polydata(
                     volumetricGraphBase._points,
-                    graphBase.edge_list_from_vector(graphBase.get_path_vector(cycles[i][1]))
+                    volumetricGraphBase.edge_list_from_vector(volumetricGraphBase.get_path_vector(cycles[i][1]))
                 )
             # offscreen_combine_plot(f"testnew_{i}.png",
 
-            cycle_edge_list = graphBase.edge_list_from_vector(graphBase.get_path_vector(cycles[i][1]))
+            cycle_edge_list = volumetricGraphBase.edge_list_from_vector(volumetricGraphBase.get_path_vector(cycles[i][1]))
             res = null_vector
             for vpair in cycle_edge_list:
                 try:
@@ -142,6 +146,12 @@ class AnnotatorTest(unittest.TestCase):
                     pass
             print(res)
         
+            # TODO:check if it's in the boundary group of volumetricGraphBase
+            pvec = volumetricGraphBase.get_path_vector(cycles[i][1])
+            print(pvec.shape)
+            print(bbasis.shape)
+            bbpivot = get_Bopt_column(np.hstack((bbasis, pvec.reshape(len(pvec), 1))).copy())
+            assert(bbpivot != bpivot)
 
             combine_plot(
                 (
