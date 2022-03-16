@@ -2,6 +2,7 @@ from .linalg import check_z2
 import numpy as np
 import logging
 import openmesh as om
+import meshpy, meshpy.tet, meshpy.geometry
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +99,7 @@ class GraphBase:
         else:
             return self.annotation_null_vector
 
-    def __init__(self, points: np.ndarray, fv_indices: np.ndarray):
+    def __init__(self, points: np.ndarray, fv_indices: np.ndarray, volumetric: bool = False):
 
         # -- Annotations --
         self.annotation = None
@@ -163,15 +164,93 @@ class GraphBase:
         
         # TODO: check if mesh is closed
         self.genus = 1 - (self.n_vertices - self.n_edges + self.n_faces) / 2
-        if abs(self.genus - 0.5) < 1e-3:
-            raise Exception("The mesh seems already planar!")
 
-        assert(abs(round(self.genus) - self.genus) < 1e-3)
+        if not volumetric:
+            if abs(self.genus - 0.5) < 1e-3:
+                raise Exception("The mesh seems already planar!")
+            assert(abs(round(self.genus) - self.genus) < 1e-3)
+
         self.genus = round(self.genus)
 
         logger.info(f"V={self.n_vertices}, E={self.n_edges}, F={self.n_faces}, genus={self.genus}")
     
     @staticmethod
     def from_openmesh(mesh: om.TriMesh, copy: bool = False):
-        graphInst = GraphBase(mesh.points(), mesh.fv_indices())
+        if copy:
+            graphInst = GraphBase(np.copy(mesh.points()), np.copy(mesh.fv_indices()))
+        else:
+            graphInst = GraphBase(mesh.points(), mesh.fv_indices())
+        return graphInst
+
+    @staticmethod
+    def volumetric_from_openmesh(mesh: om.TriMesh, copy: bool = False, box_margin: float = 0.5):
+        if copy:
+            points = np.copy(mesh.points())
+            fv_indices = np.copy(mesh.fv_indices())
+        else:
+            points = mesh.points()
+            fv_indices = mesh.fv_indices()
+
+        num_points = points.shape[0]
+
+        # find bounding box
+        xmin = ymin = zmin = 100000.0
+        xmax = ymax = zmax = -100000.0
+
+        for point in points:
+            # print(point)
+            if point[0] < xmin:
+                xmin = point[0]
+            if point[1] < ymin:
+                ymin = point[1]
+            if point[2] < zmin:
+                zmin = point[2]
+            
+            if point[0] > xmax:
+                xmax = point[0]
+            if point[1] > ymax:
+                ymax = point[1]
+            if point[2] > zmax:
+                zmax = point[2]
+        
+        logger.info(f"AABBMin=({xmin},{ymin},{zmin}) AABBMax=({xmax},{ymax},{zmax})")
+
+        boxPoints, boxFacets, _, boxFacetMarkers = meshpy.geometry.make_box(
+            np.array([xmin - box_margin, ymin - box_margin, zmin - box_margin]), np.array([xmax + box_margin, ymax + box_margin, zmax + box_margin])
+        )
+
+        boxFacets = meshpy.geometry.offset_point_indices(boxFacets, len(points))
+
+        meshInfo = meshpy.tet.MeshInfo()
+        meshInfo.set_points(
+            np.vstack((
+                points,
+                boxPoints
+            ))
+        )
+
+        meshInfo.set_facets(
+            [fv for fv in fv_indices.tolist()] + \
+            [fv for fv in boxFacets]
+        )
+
+        # TODO: find a point inside the surface
+        meshInfo.set_holes([(0.9, 0.9, 0.9)])
+
+        mesh = meshpy.tet.build(meshInfo)
+
+        mesh.write_vtk("tetgen_output.vtk")
+
+        # tetra -> 4 faces, no orientation considered
+        tet_points = np.asarray(mesh.points)
+        assert(np.allclose(tet_points[0:len(points)], points))
+        num_tets = len(mesh.elements)
+        tet_fv_indices = np.ndarray((num_tets * 4, 3), dtype=np.int)
+        for idx, tetra in enumerate(mesh.elements):
+            tet_fv_indices[idx * 4] = [tetra[0], tetra[1], tetra[2]]
+            tet_fv_indices[idx * 4 + 1] = [tetra[0], tetra[1], tetra[3]]
+            tet_fv_indices[idx * 4 + 2] = [tetra[0], tetra[2], tetra[3]]
+            tet_fv_indices[idx * 4 + 3] = [tetra[1], tetra[2], tetra[3]]
+
+        graphInst = GraphBase(tet_points, tet_fv_indices, True)
         return graphInst

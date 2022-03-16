@@ -12,7 +12,7 @@ https://boole.cs.qc.cuny.edu/cchen/publications/basis-SWAT.pdf
 
 ## 算法步骤
 
-输入是一个 Simplicial complex $ K$ 
+输入是一个单纯复合形 $ K$ 
 
 记 $ n_0 $ 是顶点数目，$ n_1 $ 是边数目，$ n_2 $ 是面数目
 
@@ -56,5 +56,17 @@ https://boole.cs.qc.cuny.edu/cchen/publications/basis-SWAT.pdf
    \end{array}
    \right]
    $$
-   的一组基即可得到 $ H_1({\mathbb K}) $ 的基。这组作为基的列向量集合应该满足条件「」。
+   的一组优先基 (earliest basis) 即可得到 $ H_1({\mathbb K}) $ 的基，记做 $ \tilde Z $
+   
+4. 计算圈标注 $ x $
+
+   对每个圈 $ z = \gamma(T, e) $，通过解 $ Z_2$ 域的线性方程组 $ \tilde Z x = z $ 得到圈对应的坐标向量 $ x $
+
+   将对应的 $ e $ 做标记 $ x $，其它在生成树上的边标记为 $ 0 $。
+
+5. 遍历所有点 $ v_s $，计算 $ v_s $ 的最短路径生成树，则不在树上的边和其两端点到 $ v_s$ 的路径为过此边和 $ v_s $ 的最短圈。
+
+   记录过所有经过的边的标记的和，以得到路径的同调坐标向量。
+
+6. 按圈长从短到长排序，寻找前 $ 2g $ 个拥有线性无关的同调坐标向量的路径。
 

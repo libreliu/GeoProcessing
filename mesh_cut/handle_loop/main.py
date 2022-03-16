@@ -10,12 +10,12 @@ Greedy Homology Basis Genarator
    - calculate shortest loop with e
 """
 
-from mesh_cut.greedy_homology.homology_opt import HomologyBasisOptimizer
-from mesh_cut.greedy_homology.annotator import Annotator
-from mesh_cut.greedy_homology.graphbase import GraphBase
+from mesh_cut.handle_loop.homology_opt import HomologyBasisOptimizer
+from mesh_cut.handle_loop.annotator import Annotator
+from mesh_cut.handle_loop.graphbase import GraphBase
 import openmesh as om
 import numpy as np
-import sys
+import sys, os
 import logging
 
 import pyvista as pv
@@ -86,7 +86,10 @@ def main(options):
 
    logger.info("Constructing GraphBase..")
    graphBase = GraphBase.from_openmesh(mesh)
-   annotator = Annotator(graphBase)
+
+   logger.info("Constructing volumetric GraphBase...")
+   volumetricGraphBase = GraphBase.volumetric_from_openmesh(mesh)
+   annotator = Annotator(volumetricGraphBase)
 
    logger.info("Calculating annotation..")
    annotation, null_vector = annotator.compute_annotation()
@@ -104,7 +107,7 @@ def main(options):
             mesh.points(),
             graphBase.edge_list_from_vector(graphBase.get_path_vector(cycles[i][1]))
          )
-      resname = options[0].split(".")[0]
+      resname = os.path.split(options[0])[-1].split(".")[0]
       offscreen_combine_plot(f"{resname}_{i}_optim.png",
       #combine_plot(
          (
